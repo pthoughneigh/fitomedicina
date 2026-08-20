@@ -1,0 +1,54 @@
+[project]
+name = "fitomedicina"
+version = "0.1.0"
+description = "Differential diagnosis for crop problems, with honest confidence"
+readme = "README.md"
+authors = [
+    { name = "pthoughneigh", email = "69865425+pthoughneigh@users.noreply.github.com" }
+]
+requires-python = ">=3.13"
+dependencies = [
+    "pydantic>=2.13.4",
+]
+
+[build-system]
+requires = ["uv_build>=0.12.5,<0.13.0"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = "fito"
+
+[dependency-groups]
+dev = [
+    "mypy>=2.3.1",
+    "pytest>=9.1.1",
+    "ruff>=0.16.4",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+
+[tool.ruff.lint]
+select = [
+    "E",     # pycodestyle errors
+    "F",     # pyflakes: undefined names, unused imports
+    "I",     # isort: import ordering
+    "N",     # pep8-naming
+    "UP",    # pyupgrade: modernise old syntax
+    "B",     # flake8-bugbear: likely bugs
+    "A",     # flake8-builtins: shadowing built-ins
+    "C4",    # flake8-comprehensions
+    "SIM",   # flake8-simplify
+    "PTH",   # prefer pathlib over os.path
+    "RUF",   # Ruff's own rules
+]
+
+[tool.mypy]
+python_version = "3.13"
+strict = true
+warn_unreachable = true
+plugins = ["pydantic.mypy"]
+
+[tool.uv]
+link-mode = "copy"
