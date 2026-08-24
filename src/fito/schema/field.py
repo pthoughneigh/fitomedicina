@@ -24,24 +24,24 @@ class Country(str, Enum):
 class SoilType(str, Enum):
     """WRB Reference Soil Group. Read off a soil map, not measured in field."""
 
-    CHERNOZEM = 'chernozem'
-    FLUVISOL = 'fluvisol'
-    GLEYSOL = 'gleysol'
-    VERTISOL = 'vertisol'
-    CAMBISOL = 'cambisol'
+    CHERNOZEM = "chernozem"
+    FLUVISOL = "fluvisol"
+    GLEYSOL = "gleysol"
+    VERTISOL = "vertisol"
+    CAMBISOL = "cambisol"
 
 
 class SoilTexture(str, Enum):
     """USDA textural class of the topsoil (0-30 cm), fine earth < 2 mm."""
 
-    SANDY_LOAM = 'sandy_loam'
-    CLAY_LOAM = 'clay_loam'
-    SILTY_CLAY_LOAM = 'silty_clay_loam'
-    LOAM = 'loam'
-    SANDY_CLAY_LOAM = 'sandy_clay_loam'
-    SILT_LOAM = 'silt_loam'
-    CLAY = 'clay'
-    SAND = 'sand'
+    SANDY_LOAM = "sandy_loam"
+    CLAY_LOAM = "clay_loam"
+    SILTY_CLAY_LOAM = "silty_clay_loam"
+    LOAM = "loam"
+    SANDY_CLAY_LOAM = "sandy_clay_loam"
+    SILT_LOAM = "silt_loam"
+    CLAY = "clay"
+    SAND = "sand"
 
 
 class Slope(str, Enum):
@@ -51,10 +51,10 @@ class Slope(str, Enum):
     only ordered labels. See notes/agronomy_raw.md.
     """
 
-    FLAT = 'flat'
-    GENTLE = 'gentle'
-    MODERATE = 'moderate'
-    STEEP = 'steep'
+    FLAT = "flat"
+    GENTLE = "gentle"
+    MODERATE = "moderate"
+    STEEP = "steep"
 
 
 class Irrigation(str, Enum):
@@ -62,11 +62,11 @@ class Irrigation(str, Enum):
 
     # Surveyed fact: no system, parcel is rain-fed. Distinct from a missing
     # field (Python None), which means nobody has recorded it yet.
-    NONE = 'none'
-    DRIP = 'drip'
-    SPRINKLER = 'sprinkler'
-    PIVOT = 'pivot'
-    FURROW = 'furrow'
+    NONE = "none"
+    DRIP = "drip"
+    SPRINKLER = "sprinkler"
+    PIVOT = "pivot"
+    FURROW = "furrow"
 
 
 class Drainage(str, Enum):
@@ -74,6 +74,6 @@ class Drainage(str, Enum):
 
     # Surveyed fact: no artificial drainage. Distinct from a missing field
     # (Python None), which means nobody has recorded it yet.
-    NONE = 'none'
-    OPEN_CHANNEL = 'open_channel'
-    TILE = 'tile'
+    NONE = "none"
+    OPEN_CHANNEL = "open_channel"
+    TILE = "tile"
