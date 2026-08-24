@@ -43,6 +43,9 @@ select = [
     "PTH",   # prefer pathlib over os.path
     "RUF",   # Ruff's own rules
 ]
+ignore = [
+    "UP042",  # str,Enum kept deliberately over StrEnum
+]
 
 [tool.mypy]
 python_version = "3.13"
