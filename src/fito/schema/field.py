@@ -1,7 +1,10 @@
-"""Controlled vocabularies for the agronomic field model.
+"""The agronomic field model and its controlled vocabularies.
 
-Members subclass ``str``, so ``Country.RS == "RS"`` holds and ``json.dumps``
-serialises them as their value.
+``Field`` is a durable unit of land management; the enums below it are the
+code lists its classification attributes draw on.
+
+Enum members subclass ``str``, so ``Country.RS == "RS"`` holds and
+``json.dumps`` serialises them as their value.
 
 Gotcha: on Python 3.11+ an f-string goes through ``Enum.__format__`` and
 renders ``"Country.RS"``, while concatenation goes through ``str`` and renders
