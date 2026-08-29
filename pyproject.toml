@@ -56,3 +56,6 @@ plugins = ["pydantic.mypy"]
 
 [tool.uv]
 link-mode = "copy"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
