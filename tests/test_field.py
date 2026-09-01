@@ -1,4 +1,18 @@
-"""Tests for ``Field``'s coordinate validator and the ``grid_cell`` it derives."""
+"""Tests for ``Field``'s coordinate validator and the ``grid_cell`` it derives.
+
+``grid_cell`` is the only spatial value permitted to leave the country, so the
+tests that pin its formatting are pinning a privacy boundary rather than a
+string. Two decimal places, zero-padded, floored rather than truncated: a swap
+to ``ROUND_DOWN`` is invisible in the region being modelled and shows up only
+below zero, which is why one test sits in the South Pacific.
+
+``test_unknown_key_raises`` and ``test_rebuild_field_equals_original``
+are not about coordinates. ``extra="forbid"`` and the rebuild idiom are
+model configuration, and they are here because nothing else would notice
+if they were dropped. They also record the other half of a distinction
+the negative tests rely on: a field-level error carries the attribute name
+in ``loc``, while a rule spanning several attributes carries an empty one.
+"""
 
 from decimal import Decimal
 
@@ -50,9 +64,21 @@ def test_half_set_coordinate_pair_raises() -> None:
     assert errors[0]["loc"] == ()
 
 
+def test_assigning_one_coordinate_raises() -> None:
+    field = Field(country=Country.RS)
+    with pytest.raises(ValidationError) as excinfo:
+        field.latitude = Decimal("45.8")
+
+    errors = excinfo.value.errors()
+    assert len(errors) == 1
+    assert errors[0]["type"] == "value_error"
+    assert errors[0]["loc"] == ()
+
+
 def test_unknown_key_raises() -> None:
     with pytest.raises(ValidationError) as excinfo:
         Field(country=Country.RS, unknown_variable=Decimal("19.35"))
+
     errors = excinfo.value.errors()
     assert len(errors) == 1
     assert errors[0]["type"] == "extra_forbidden"

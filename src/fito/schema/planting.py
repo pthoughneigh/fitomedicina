@@ -73,14 +73,14 @@ class Planting(BaseModel):
     id: uuid.UUID = PydanticField(default_factory=uuid.uuid4)
     field_id: uuid.UUID
     crop: Crop
+    status: PlantingStatus
+    establishment_method: EstablishmentMethod
     variety: str | None = None
     rootstock: str | None = None
     area_ha: Decimal | None = PydanticField(default=None, gt=0, max_digits=10, decimal_places=4)
     location_note: str | None = None
     protection: Protection = Protection.OPEN
     establishment_date: date | None = None
-    establishment_method: EstablishmentMethod
-    status: PlantingStatus
     termination_date: date | None = None
     plant_density: int | None = PydanticField(default=None, gt=0)
     seed_rate_kg_ha: Decimal | None = PydanticField(default=None, gt=0, decimal_places=4)
@@ -103,6 +103,11 @@ class Planting(BaseModel):
         termination date and no establishment date. All four combinations are
         legitimate. Only their order is constrained, and only when both exist.
 
+        The comparison is >, not >=, so both dates falling on one day is accepted
+        rather than rejected. A stand hailed out on the afternoon it was sown, or
+        one sown to the wrong crop and ploughed back in the same day, is short but
+        not impossible.
+
         Status is a snapshot, not a step in a sequence. A stand may enter the
         system in any of the three states, so nothing here may test a
         transition — there is often no previous state to have come from.
@@ -116,5 +121,4 @@ class Planting(BaseModel):
             and (self.establishment_date > self.termination_date)
         ):
             raise ValueError("Termination date cannot be before the establishment date.")
-
         return self
