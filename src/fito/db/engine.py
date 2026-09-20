@@ -11,6 +11,8 @@ import sqlite3
 from sqlalchemy import Engine, create_engine, event
 from sqlalchemy.pool import ConnectionPoolEntry
 
+from fito.db.field import CadastralParcelRow, FieldRow  # noqa: F401
+
 
 def _enable_foreign_keys(dbapi_connection: sqlite3.Connection, _: ConnectionPoolEntry) -> None:
     """Turn foreign key enforcement on for one SQLite connection.

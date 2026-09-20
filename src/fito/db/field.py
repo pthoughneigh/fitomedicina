@@ -10,7 +10,7 @@ import uuid
 from decimal import Decimal
 
 from sqlalchemy import ForeignKey
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from fito.db.base import Base
 from fito.schema.field import Country, Drainage, Irrigation, Slope, SoilTexture, SoilType
@@ -46,6 +46,23 @@ class FieldRow(Base):
     latitude: Mapped[Decimal | None] = mapped_column()
     longitude: Mapped[Decimal | None] = mapped_column()
     area_ha: Mapped[Decimal | None] = mapped_column()
+    # Not a column. ``ForeignKey`` tells the database the two are related;
+    # this tells the ORM. Without it the ORM writes rows in the order they
+    # were added, and a parcel written before its field fails the constraint
+    # -- which is now visible, because the pragma is on.
+    #
+    # ``delete-orphan`` rather than the default, which blanks the child's
+    # foreign key and leaves it. ``field_id`` is half the primary key, so it
+    # cannot be blanked, and an erasure request has to take the parcels with
+    # the field rather than orphan them.
+    #
+    # One direction only. Nothing reads from a parcel up towards its field,
+    # and the reverse side costs one line in each class on the day it does.
+    # Two relationships over one foreign key must name each other through
+    # ``back_populates`` or SQLAlchemy warns that they will disagree.
+    cadastral_parcels: Mapped[list["CadastralParcelRow"]] = relationship(
+        cascade="all, delete-orphan"
+    )
 
 
 class CadastralParcelRow(Base):
