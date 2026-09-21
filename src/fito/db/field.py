@@ -13,7 +13,7 @@ from sqlalchemy import ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from fito.db.base import Base
-from fito.schema.field import Country, Drainage, Irrigation, Slope, SoilTexture, SoilType
+from fito.schema.field import Country, Drainage, Field, Irrigation, Slope, SoilTexture, SoilType
 
 
 class FieldRow(Base):
@@ -27,6 +27,7 @@ class FieldRow(Base):
     __tablename__ = "fields"
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True)
+
     # No ForeignKey: ``holdings`` has no table yet, and a reference into a
     # registry that does not contain the target fails to resolve. The column
     # carries the value; it gains the constraint when the table lands.
@@ -46,6 +47,7 @@ class FieldRow(Base):
     latitude: Mapped[Decimal | None] = mapped_column()
     longitude: Mapped[Decimal | None] = mapped_column()
     area_ha: Mapped[Decimal | None] = mapped_column()
+
     # Not a column. ``ForeignKey`` tells the database the two are related;
     # this tells the ORM. Without it the ORM writes rows in the order they
     # were added, and a parcel written before its field fails the constraint
@@ -70,3 +72,38 @@ class CadastralParcelRow(Base):
 
     field_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("fields.id"), primary_key=True)
     parcel_number: Mapped[str] = mapped_column(primary_key=True)
+
+
+def to_field_row(field: Field) -> FieldRow:
+    """Build the row for ``field``, with its cadastral parcels attached.
+
+    Field by field rather than ``FieldRow(**field.model_dump())``: that line
+    holds only while the two shapes match, and the module docstring already
+    says they will not.
+
+    Parcels are built from ``parcel_number`` alone. ``field_id`` is left
+    unset on purpose: the relationship writes it at flush, from the field the
+    parcel is attached to. Half of the parcel's primary key is missing here
+    and that is correct.
+    """
+    return FieldRow(
+        id=field.id,
+        country=field.country,
+        holding_id=field.holding_id,
+        name=field.name,
+        grid_cell=field.grid_cell,
+        municipality=field.municipality,
+        cadastral_municipality=field.cadastral_municipality,
+        soil_type=field.soil_type,
+        soil_texture=field.soil_texture,
+        slope=field.slope,
+        irrigation=field.irrigation,
+        drainage=field.drainage,
+        latitude=field.latitude,
+        longitude=field.longitude,
+        area_ha=field.area_ha,
+        cadastral_parcels=[
+            CadastralParcelRow(parcel_number=parcel_number)
+            for parcel_number in field.cadastral_parcels
+        ],
+    )
