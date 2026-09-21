@@ -1,8 +1,9 @@
 """The declarative registry every ORM model is attached to.
 
-Table definitions live in this package; the engine and the session do not.
-Defining a table and connecting to a database are separate concerns with
-different lifetimes in a test suite.
+Table definitions live beside it, one module per entity, and the engine
+in ``engine.py``. Defining a table and connecting to a database are
+separate concerns with different lifetimes in a test suite, so they are
+kept apart by module rather than by package.
 """
 
 import enum
