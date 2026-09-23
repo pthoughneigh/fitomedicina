@@ -22,23 +22,43 @@ there passes whether or not anything was committed. Assertions stay inside
 the second session because ``cadastral_parcels`` loads on first access, which
 a closed session cannot do. Parcels are compared sorted: the child table has
 no column for order, so the database promises none, and the model needs none.
+
+Each test gets its own database from the ``engine`` fixture: in memory,
+empty at the start, and never on disk. A shared one would be faster, and
+every test would see the rows the others left behind.
+
+``test_parcel_pointing_at_a_nonexistent_field_is_refused`` tests the guard
+in the database, not the conversion, and it sits here because this is the
+file with a database. The orphan is built by hand: ``to_field_row`` always
+attaches a parcel to a real field, so it cannot make this mistake. SQLite
+enforces foreign keys only on connections that ask for it, and nothing else
+in the suite proves that ``build_engine`` asks. ``IntegrityError`` is raised
+by every constraint alike, so the test reads the message -- and the message
+is SQLite's wording. PostgreSQL refuses the same row in other words, and
+this assertion changes the day the suite runs there.
 """
 
 import uuid
 from decimal import Decimal
 
+import pytest
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from fito.db.base import Base
-from fito.db.engine import build_engine
-from fito.db.field import FieldRow, to_field_row
+from fito.db.engine import Engine, build_engine
+from fito.db.field import CadastralParcelRow, FieldRow, to_field_row
 from fito.schema.field import Country, Drainage, Field, Irrigation, Slope, SoilTexture, SoilType
 
 
-def test_field_survives_a_round_trip_through_the_database_unchanged() -> None:
+@pytest.fixture
+def engine() -> Engine:
     engine = build_engine("sqlite://")
     Base.metadata.create_all(engine)
+    return engine
 
+
+def test_field_survives_a_round_trip_through_the_database_unchanged(engine: Engine) -> None:
     field = Field(
         country=Country.RS,
         holding_id=uuid.uuid4(),
@@ -71,3 +91,15 @@ def test_field_survives_a_round_trip_through_the_database_unchanged() -> None:
 
         stored_parcels = sorted(parcel.parcel_number for parcel in row.cadastral_parcels)
         assert stored_parcels == sorted(field.cadastral_parcels)
+
+
+def test_parcel_pointing_at_a_nonexistent_field_is_refused(engine: Engine) -> None:
+    parcel_row = CadastralParcelRow(field_id=uuid.uuid4(), parcel_number="123/455")
+
+    with Session(engine) as session:
+        session.add(parcel_row)
+
+        with pytest.raises(IntegrityError) as excinfo:
+            session.commit()
+
+        assert "FOREIGN KEY constraint failed" in str(excinfo.value)
