@@ -36,6 +36,27 @@ in the suite proves that ``build_engine`` asks. ``IntegrityError`` is raised
 by every constraint alike, so the test reads the message -- and the message
 is SQLite's wording. PostgreSQL refuses the same row in other words, and
 this assertion changes the day the suite runs there.
+
+``test_parcels_get_deleted_when_field_is_deleted`` holds the erasure
+promise. A parcel number points at land and through it at a person --
+decisions/0011 counts it as personal data -- so a field deleted on request
+must not leave its parcels behind. The check reads in a third session, so
+that the answer comes from the database and not from the session that did
+the deleting.
+
+With the cascade removed, the test fails at the commit after the delete and
+not at its assertion. SQLAlchemy refuses before any change reaches the
+database: its default is to blank the parcels' ``field_id``, which is half
+their primary key. The ``AssertionError`` it raises is its own and reads
+like this test failing; the traceback says whose it is. The assertion is
+for the quiet case, where the delete goes through and the parcels stay.
+
+It proves only the ``all`` half of the cascade -- ``cascade="all"`` alone
+passes it. ``delete-orphan`` covers a parcel removed from a field that
+stays, and nothing tests it, because no code removes one yet. Its test
+arrives with the first code that does, most likely a lease changing at
+import, and takes that code's shape. Dropping ``delete-orphan`` before then
+fails loudly on first use rather than quietly.
 """
 
 import uuid
@@ -103,3 +124,20 @@ def test_parcel_pointing_at_a_nonexistent_field_is_refused(engine: Engine) -> No
             session.commit()
 
         assert "FOREIGN KEY constraint failed" in str(excinfo.value)
+
+
+def test_parcels_get_deleted_when_field_is_deleted(engine: Engine) -> None:
+    field = Field(country=Country.RS, cadastral_parcels=["123/45", "567/89/10"])
+    with Session(engine) as session:
+        session.add(to_field_row(field))
+        session.commit()
+
+    with Session(engine) as session:
+        row = session.get(FieldRow, field.id)
+        session.delete(row)
+        session.commit()
+
+    with Session(engine) as session:
+        for number in field.cadastral_parcels:
+            parcel = session.get(CadastralParcelRow, (field.id, number))
+            assert parcel is None
