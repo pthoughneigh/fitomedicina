@@ -53,10 +53,13 @@ class FieldRow(Base):
     # were added, and a parcel written before its field fails the constraint
     # -- which is now visible, because the pragma is on.
     #
-    # ``delete-orphan`` rather than the default, which blanks the child's
-    # foreign key and leaves it. ``field_id`` is half the primary key, so it
-    # cannot be blanked, and an erasure request has to take the parcels with
-    # the field rather than orphan them.
+    # The default keeps a parcel and blanks its ``field_id`` in two cases:
+    # when its field is deleted, and when it is taken out of the list while
+    # the field stays. ``field_id`` is half the primary key, so it cannot be
+    # blanked, and SQLAlchemy refuses. ``all`` includes ``delete`` and covers
+    # the first case, which an erasure request needs; the cascade test in
+    # ``tests/test_round_trip.py`` holds it. ``delete-orphan`` covers the
+    # second, a lease ending, and has no test until code removes a parcel.
     #
     # One direction only. Nothing reads from a parcel up towards its field,
     # and the reverse side costs one line in each class on the day it does.
