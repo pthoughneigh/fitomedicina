@@ -63,11 +63,12 @@ import uuid
 from decimal import Decimal
 
 import pytest
+from sqlalchemy import Engine
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from fito.db.base import Base
-from fito.db.engine import Engine, build_engine
+from fito.db.engine import build_engine
 from fito.db.field import CadastralParcelRow, FieldRow, to_field_row
 from fito.schema.field import Country, Drainage, Field, Irrigation, Slope, SoilTexture, SoilType
 
