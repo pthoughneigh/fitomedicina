@@ -110,3 +110,46 @@ def to_field_row(field: Field) -> FieldRow:
             for parcel_number in field.cadastral_parcels
         ],
     )
+
+
+def to_field(row: FieldRow) -> Field:
+    """Build the ``Field`` for ``row``, back through the model's validators.
+
+    ``Field(...)`` rather than ``Field.model_construct(...)``, which would
+    hand back the disk's contents under the model's name; decisions/0013
+    shows both. Every validator runs again. ``grid_cell`` is passed like
+    every other column and replaced by the value the validator derives
+    from the coordinates, so what a caller sees is always the derived
+    value, never the stored one. A row that breaks today's rules raises
+    ``ValidationError`` here. That is the intended failure, and it is not
+    caught: the fix belongs on the row, not on the read.
+
+    Field by field, for the same reason as ``to_field_row``.
+
+    Call it while the session that loaded ``row`` is still open. The
+    parcels load only on first access, and a closed session cannot load
+    them: the error is ``DetachedInstanceError`` on ``cadastral_parcels``,
+    while the plain columns still read fine, so it looks like a problem
+    with the parcels when the cause is the timing. A caller that needs the
+    ``Field`` after the session closes loads the parcels eagerly in its
+    own query; nothing does yet.
+    """
+
+    return Field(
+        id=row.id,
+        country=row.country,
+        holding_id=row.holding_id,
+        name=row.name,
+        grid_cell=row.grid_cell,
+        municipality=row.municipality,
+        cadastral_municipality=row.cadastral_municipality,
+        soil_type=row.soil_type,
+        soil_texture=row.soil_texture,
+        slope=row.slope,
+        irrigation=row.irrigation,
+        drainage=row.drainage,
+        latitude=row.latitude,
+        longitude=row.longitude,
+        area_ha=row.area_ha,
+        cadastral_parcels=sorted(parcel.parcel_number for parcel in row.cadastral_parcels),
+    )
