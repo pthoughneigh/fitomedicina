@@ -20,8 +20,9 @@ The read happens in a second session. In the session that added it, ``get``
 hands back the very object it was given, committed or not, so a test reading
 there passes whether or not anything was committed. Assertions stay inside
 the second session because ``cadastral_parcels`` loads on first access, which
-a closed session cannot do. Parcels are compared sorted: the child table has
-no column for order, so the database promises none, and the model needs none.
+a closed session cannot do. Parcels are compared sorted on both sides: the
+child table has no column for order, so the database promises none, and this
+test asks which parcels arrived, not in what order.
 
 Each test gets its own database from the ``engine`` fixture: in memory,
 empty at the start, and never on disk. A shared one would be faster, and
@@ -57,6 +58,27 @@ stays, and nothing tests it, because no code removes one yet. Its test
 arrives with the first code that does, most likely a lease changing at
 import, and takes that code's shape. Dropping ``delete-orphan`` before then
 fails loudly on first use rather than quietly.
+
+``test_field_read_back_through_to_field_equals_the_original`` takes the
+other route back: through ``to_field``, to a ``Field``, compared with one
+``==``. It sits beside the first test rather than replacing it. A round
+trip cannot see a mistake made the same way in both directions: with
+latitude and longitude swapped in both ``to_field_row`` and ``to_field``,
+it stays green while the disk holds them swapped, and only the first test,
+which reads the row by column name, goes red. It is the same blindness as
+``values_callable``, which writes and reads through one mapping.
+
+Its parcels are given out of order on purpose. Sorted input would equal the
+expected output and test nothing; out of order, the test fails if the model
+stops sorting -- though only because SQLite happens to hand the parcels
+back sorted. A database returning them in the order written would leave it
+green, which is why the rule has its own test, without a database, in
+``test_field.py``.
+
+When it fails, the diff also marks ``latitude``, ``longitude`` and
+``area_ha``. SQLite pads decimals to ten places (decisions/0010); those are
+differences of spelling, not value, and ``==`` holds for them. The cause is
+elsewhere in the diff.
 """
 
 import uuid
@@ -69,7 +91,7 @@ from sqlalchemy.orm import Session
 
 from fito.db.base import Base
 from fito.db.engine import build_engine
-from fito.db.field import CadastralParcelRow, FieldRow, to_field_row
+from fito.db.field import CadastralParcelRow, FieldRow, to_field, to_field_row
 from fito.schema.field import Country, Drainage, Field, Irrigation, Slope, SoilTexture, SoilType
 
 
@@ -142,3 +164,31 @@ def test_parcels_get_deleted_when_field_is_deleted(engine: Engine) -> None:
         for number in field.cadastral_parcels:
             parcel = session.get(CadastralParcelRow, (field.id, number))
             assert parcel is None
+
+
+def test_field_read_back_through_to_field_equals_the_original(engine: Engine) -> None:
+    field = Field(
+        country=Country.RS,
+        holding_id=uuid.uuid4(),
+        name="Kod bare",
+        latitude=Decimal("45.771234"),
+        longitude=Decimal("19.351234"),
+        municipality="Sombor",
+        cadastral_parcels=["1234/6", "1234/5"],
+        cadastral_municipality="Stanisic",
+        area_ha=Decimal("4.1234"),
+        soil_type=SoilType.CHERNOZEM,
+        soil_texture=SoilTexture.SILT_LOAM,
+        slope=Slope.GENTLE,
+        irrigation=Irrigation.DRIP,
+        drainage=Drainage.TILE,
+    )
+
+    with Session(engine) as session:
+        session.add(to_field_row(field))
+        session.commit()
+
+    with Session(engine) as session:
+        row = session.get(FieldRow, field.id)
+        assert row is not None
+        assert to_field(row) == field
