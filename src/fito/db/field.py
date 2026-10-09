@@ -133,6 +133,10 @@ def to_field(row: FieldRow) -> Field:
     with the parcels when the cause is the timing. A caller that needs the
     ``Field`` after the session closes loads the parcels eagerly in its
     own query; nothing does yet.
+
+    Parcels are passed in the order the database returns them, an order
+    it does not promise. ``Field`` sorts them itself (decisions/0014), so
+    sorting here would give the same rule a second owner.
     """
 
     return Field(
@@ -151,5 +155,5 @@ def to_field(row: FieldRow) -> Field:
         latitude=row.latitude,
         longitude=row.longitude,
         area_ha=row.area_ha,
-        cadastral_parcels=sorted(parcel.parcel_number for parcel in row.cadastral_parcels),
+        cadastral_parcels=[parcel.parcel_number for parcel in row.cadastral_parcels],
     )
