@@ -17,7 +17,7 @@ from decimal import ROUND_FLOOR, Decimal
 from enum import Enum
 from typing import Self
 
-from pydantic import BaseModel, ConfigDict, model_validator
+from pydantic import BaseModel, ConfigDict, field_validator, model_validator
 from pydantic import Field as PydanticField
 
 # 1.1 km
@@ -124,6 +124,25 @@ class Field(BaseModel):
     slope: Slope | None = None
     irrigation: Irrigation = Irrigation.NONE
     drainage: Drainage | None = None
+
+    @field_validator("cadastral_parcels")
+    @classmethod
+    def _sort_cadastral_parcels(cls, value: list[str]) -> list[str]:
+        """Keep the parcels in one order, however the ``Field`` was built.
+
+        The parcels are a set (decisions/0011) held in a list, and a list
+        compares in order: without one order, the same parcels in a
+        different sequence make two ``Field`` values for the same land
+        unequal. Sorting here covers every way in -- construction,
+        assignment and the read through ``to_field`` -- where sorting in
+        ``to_field`` covered only the read. decisions/0014 has the
+        alternatives.
+
+        The order is canonical, not meaningful: string order puts
+        ``1234/10`` before ``1234/9``. Changing the list in place, with
+        ``append``, skips this, as it skips every validator.
+        """
+        return sorted(value)
 
     @model_validator(mode="after")
     def _check_coordinates_and_derive_grid_cell(self) -> Self:

@@ -1,4 +1,4 @@
-"""Tests for ``Field``'s coordinate validator and the ``grid_cell`` it derives.
+"""Tests for ``Field``'s validators: coordinates, ``grid_cell``, parcel order.
 
 ``grid_cell`` is the only spatial value permitted to leave the country, so the
 tests that pin its formatting are pinning a privacy boundary rather than a
@@ -12,6 +12,14 @@ model configuration, and they are here because nothing else would notice
 if they were dropped. They also record the other half of a distinction
 the negative tests rely on: a field-level error carries the attribute name
 in ``loc``, while a rule spanning several attributes carries an empty one.
+
+``test_cadastral_parcels_are_kept_sorted_in_string_order`` holds the one
+rule on parcels, and holds it here, without a database. The round-trip
+test also fails when the model stops sorting, but only because SQLite
+hands the parcels back sorted; a database returning them in the order
+written would leave it green. The input is out of order in string terms,
+and the expected value pins string order rather than numeric: ``1234/10``
+before ``1234/9`` (decisions/0014).
 """
 
 from decimal import Decimal
@@ -95,3 +103,8 @@ def test_rebuild_field_equals_original() -> None:
     )
     rebuilt = Field(**original.model_dump())
     assert rebuilt == original
+
+
+def test_cadastral_parcels_are_kept_sorted_in_string_order() -> None:
+    field = Field(country=Country.RS, cadastral_parcels=["1234/9", "1234/10"])
+    assert field.cadastral_parcels == ["1234/10", "1234/9"]
