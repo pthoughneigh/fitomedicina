@@ -58,7 +58,7 @@ class FieldRow(Base):
     # the field stays. ``field_id`` is half the primary key, so it cannot be
     # blanked, and SQLAlchemy refuses. ``all`` includes ``delete`` and covers
     # the first case, which an erasure request needs; the cascade test in
-    # ``tests/test_round_trip.py`` holds it. ``delete-orphan`` covers the
+    # ``tests/test_field_round_trip.py`` holds it. ``delete-orphan`` covers the
     # second, a lease ending, and has no test until code removes a parcel.
     #
     # One direction only. Nothing reads from a parcel up towards its field,
