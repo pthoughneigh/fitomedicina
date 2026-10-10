@@ -89,17 +89,8 @@ from sqlalchemy import Engine
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from fito.db.base import Base
-from fito.db.engine import build_engine
 from fito.db.field import CadastralParcelRow, FieldRow, to_field, to_field_row
 from fito.schema.field import Country, Drainage, Field, Irrigation, Slope, SoilTexture, SoilType
-
-
-@pytest.fixture
-def engine() -> Engine:
-    engine = build_engine("sqlite://")
-    Base.metadata.create_all(engine)
-    return engine
 
 
 def test_field_survives_a_round_trip_through_the_database_unchanged(engine: Engine) -> None:
