@@ -73,8 +73,18 @@ class Planting(BaseModel):
     id: uuid.UUID = PydanticField(default_factory=uuid.uuid4)
     field_id: uuid.UUID
     crop: Crop
-    status: PlantingStatus
-    establishment_method: EstablishmentMethod
+    # Nullable, with no default member: `None` means nobody has said, not
+    # any stage of the lifecycle. A default would contradict a null date, and
+    # a value inferred from a reported symptom is right only usually -- last
+    # season's crop, rot in storage, seedlings not yet transplanted.
+    # decisions/0017.
+    status: PlantingStatus | None = None
+    # Nullable for the same reason, and not defaulted per crop: pepper is
+    # transplanted only usually, and a guess at a high base rate is still a
+    # guess (decisions/0002). What the method cannot be is absent beside a
+    # date, since it is what says which date that is -- the validator below.
+    # decisions/0017.
+    establishment_method: EstablishmentMethod | None = None
     variety: str | None = None
     rootstock: str | None = None
     area_ha: Decimal | None = PydanticField(default=None, gt=0, max_digits=10, decimal_places=4)
@@ -97,6 +107,14 @@ class Planting(BaseModel):
         the wheat is standing but not whether it went in on 12 or 15 October
         should not be made to invent one.
 
+        An establishment date with no establishment method is the third
+        contradiction, of a different kind. The method is what says which date
+        the single column holds -- sown or transplanted, six to eight weeks
+        apart for pepper -- so a date without one cannot be read. The reverse
+        is accepted: a method with no date is incomplete, not wrong. Both are
+        nullable since decisions/0017, and a farmer who knows the date knows
+        whether they sowed or transplanted, so this rejects no real answer.
+
         The two dates are independent, unlike the coordinate pair on ``Field``.
         Wheat sown in October has no termination date until July; the orchard
         will have none for twenty years; a crop entered retroactively can have a
@@ -115,10 +133,13 @@ class Planting(BaseModel):
 
         if (self.status == PlantingStatus.PLANNED) and (self.establishment_date is not None):
             raise ValueError("A planned planting has no establishment date.")
+        if (self.establishment_method is None) and (self.establishment_date is not None):
+            raise ValueError("An establishment date needs an establishment method.")
         if (
             (self.establishment_date is not None)
             and (self.termination_date is not None)
             and (self.establishment_date > self.termination_date)
         ):
             raise ValueError("Termination date cannot be before the establishment date.")
+
         return self
