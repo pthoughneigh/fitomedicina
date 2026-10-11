@@ -38,8 +38,12 @@ class PlantingRow(Base):
     # through their field. decisions/0016.
     field_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("fields.id", ondelete="CASCADE"))
     crop: Mapped[Crop] = mapped_column()
-    status: Mapped[PlantingStatus] = mapped_column()
-    establishment_method: Mapped[EstablishmentMethod] = mapped_column()
+    # Nullable since decisions/0017, following the model: an anonymous
+    # planting is stored with neither. The ``| None`` is what removes
+    # ``NOT NULL`` from the DDL; without it the model accepts the planting
+    # and the database refuses it on commit.
+    status: Mapped[PlantingStatus | None] = mapped_column()
+    establishment_method: Mapped[EstablishmentMethod | None] = mapped_column()
     variety: Mapped[str | None] = mapped_column()
     rootstock: Mapped[str | None] = mapped_column()
     area_ha: Mapped[Decimal | None] = mapped_column()

@@ -22,6 +22,14 @@ swapped in both ``to_planting_row`` and ``to_planting``, only the first
 test goes red; with ``variety`` dropped from ``to_planting`` alone, only
 this one does.
 
+``test_anonymous_planting_survives_a_round_trip`` holds decisions/0017 at
+the database: a planting with only its field and its crop is stored and
+read back unchanged. The first two tests cannot see this, since every
+attribute is set there. Before the two columns were nullable, the model
+accepted this planting and the database refused it with ``NOT NULL
+constraint failed`` -- the model and the table had stopped agreeing,
+and only a planting that leaves them empty shows it.
+
 ``test_planting_pointing_at_a_nonexistent_field_is_refused`` holds the
 foreign key on ``plantings``. The planting is built through the model and
 ``to_planting_row``, the route the application will take: ``Planting``
@@ -163,3 +171,17 @@ def test_plantings_get_deleted_when_field_is_deleted(engine: Engine) -> None:
 
     with Session(engine) as session:
         assert session.get(PlantingRow, planting.id) is None
+
+
+def test_anonymous_planting_survives_a_round_trip(engine: Engine) -> None:
+    field = Field(country=Country.RS)
+    planting = Planting(field_id=field.id, crop=Crop.PEPPER)
+
+    with Session(engine) as session:
+        session.add(to_field_row(field))
+        session.add(to_planting_row(planting))
+        session.commit()
+
+    with Session(engine) as session:
+        row = session.get(PlantingRow, planting.id)
+        assert to_planting(row) == planting
