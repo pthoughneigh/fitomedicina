@@ -49,9 +49,11 @@ class FieldRow(Base):
     area_ha: Mapped[Decimal | None] = mapped_column()
 
     # Not a column. ``ForeignKey`` tells the database the two are related;
-    # this tells the ORM. Without it the ORM writes rows in the order they
-    # were added, and a parcel written before its field fails the constraint
-    # -- which is now visible, because the pragma is on.
+    # this tells the ORM, which reads only this when it decides the order of
+    # its INSERTs. Without it the ORM orders classes by their full names, and
+    # ``CadastralParcelRow`` sorts before ``FieldRow``: a parcel would be
+    # written before its field and fail the constraint -- which is visible,
+    # because the pragma is on.
     #
     # The default keeps a parcel and blanks its ``field_id`` in two cases:
     # when its field is deleted, and when it is taken out of the list while

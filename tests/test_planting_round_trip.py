@@ -8,10 +8,16 @@ reads back empty and a swapped pair reads back as each other. The values
 are chosen to be distinct, not agronomically consistent: a transplanted
 pepper has no seed rate.
 
-Each test writes a ``Field`` before its planting, in that order and in
-one session: the foreign key refuses a planting that points at nothing,
-and without a ``relationship`` the ORM writes rows in the order they
-were added.
+Every test that writes a ``Field`` and its planting flushes between the
+two: the foreign key refuses a planting that points at nothing, and the
+ORM does not send rows in the order they were added. Without a
+``relationship`` to say which row depends on which, it sends one class's
+rows before another's in the order of their full class names. Measured:
+``fito.db.case.CaseRow`` went before ``fito.db.planting.PlantingRow`` and
+was refused, while adding a planting before its field still passed,
+because ``field`` sorts before ``planting``. These tests passed on that
+alphabet until the flush; renaming a module could have turned them red
+for no visible reason.
 
 ``test_planting_read_back_through_to_planting_equals_the_original`` takes
 the route back through ``to_planting`` and compares with one ``==``. It
@@ -21,14 +27,6 @@ trip, and only the comparison by column name sees it. With the two dates
 swapped in both ``to_planting_row`` and ``to_planting``, only the first
 test goes red; with ``variety`` dropped from ``to_planting`` alone, only
 this one does.
-
-``test_anonymous_planting_survives_a_round_trip`` holds decisions/0017 at
-the database: a planting with only its field and its crop is stored and
-read back unchanged. The first two tests cannot see this, since every
-attribute is set there. Before the two columns were nullable, the model
-accepted this planting and the database refused it with ``NOT NULL
-constraint failed`` -- the model and the table had stopped agreeing,
-and only a planting that leaves them empty shows it.
 
 ``test_planting_pointing_at_a_nonexistent_field_is_refused`` holds the
 foreign key on ``plantings``. The planting is built through the model and
@@ -51,6 +49,14 @@ Broken both ways, the test goes red in two different places. Without
 ``IntegrityError``. Without the foreign-key pragma the delete goes
 through, the planting stays behind and nothing raises: only the check
 at the end fails, and without it the test passed.
+
+``test_anonymous_planting_survives_a_round_trip`` holds decisions/0017 at
+the database: a planting with only its field and its crop is stored and
+read back unchanged. The first two tests cannot see this, since every
+attribute is set there. Before the two columns were nullable, the model
+accepted this planting and the database refused it with ``NOT NULL
+constraint failed`` -- the model and the table had stopped agreeing,
+and only a planting that leaves them empty shows it.
 """
 
 import uuid
@@ -90,6 +96,7 @@ def test_planting_survives_a_round_trip_through_the_database_unchanged(engine: E
 
     with Session(engine) as session:
         session.add(to_field_row(field))
+        session.flush()
         session.add(to_planting_row(planting))
         session.commit()
 
@@ -124,6 +131,7 @@ def test_planting_read_back_through_to_planting_equals_the_original(engine: Engi
 
     with Session(engine) as session:
         session.add(to_field_row(field))
+        session.flush()
         session.add(to_planting_row(planting))
         session.commit()
 
@@ -162,6 +170,7 @@ def test_plantings_get_deleted_when_field_is_deleted(engine: Engine) -> None:
 
     with Session(engine) as session:
         session.add(to_field_row(field))
+        session.flush()
         session.add(to_planting_row(planting))
         session.commit()
 
@@ -179,9 +188,11 @@ def test_anonymous_planting_survives_a_round_trip(engine: Engine) -> None:
 
     with Session(engine) as session:
         session.add(to_field_row(field))
+        session.flush()
         session.add(to_planting_row(planting))
         session.commit()
 
     with Session(engine) as session:
         row = session.get(PlantingRow, planting.id)
+        assert row is not None
         assert to_planting(row) == planting
