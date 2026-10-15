@@ -17,18 +17,30 @@ model always stamps an aware value and so cannot produce the case this
 guards against: code that writes rows by hand. The error surfaces as
 ``StatementError``, since SQLAlchemy wraps what the type raises while it
 is preparing the statement.
+
+``test_case_read_back_through_to_case_equals_the_original`` takes the
+route back through ``to_case`` and compares with one ``==``, for the
+reason ``test_planting_round_trip.py`` gives: a mistake made the same way
+in both translations passes the comparison by column name.
+
+``test_cases_get_deleted_when_field_is_deleted`` holds the erasure chain
+two floors down: a bulk ``delete`` of the field, which the ORM never sees,
+removes the planting through ``plantings``' cascade and the case through
+``cases``' own. The farmer's words go with the field, inside the database,
+on every path. The check reads in a third session, so that the answer
+comes from the database.
 """
 
 import uuid
 from datetime import date, datetime
 
 import pytest
-from sqlalchemy import Engine
+from sqlalchemy import Engine, delete
 from sqlalchemy.exc import StatementError
 from sqlalchemy.orm import Session
 
-from fito.db.case import CaseRow, to_case_row
-from fito.db.field import to_field_row
+from fito.db.case import CaseRow, to_case, to_case_row
+from fito.db.field import FieldRow, to_field_row
 from fito.db.planting import to_planting_row
 from fito.schema.case import Case
 from fito.schema.field import Country, Field
@@ -88,3 +100,51 @@ def test_naive_opened_at_is_refused(engine: Engine) -> None:
             session.commit()
 
         assert "naive" in str(excinfo.value)
+
+
+def test_case_read_back_through_to_case_equals_the_original(engine: Engine) -> None:
+    field = Field(country=Country.RS)
+    planting = Planting(field_id=field.id, crop=Crop.PEPPER)
+    case = Case(
+        planting_id=planting.id,
+        initial_message="Žute mi listovi na paprici.",
+        observed_on=date(2026, 10, 1),
+    )
+
+    with Session(engine) as session:
+        session.add(to_field_row(field))
+        session.flush()
+        session.add(to_planting_row(planting))
+        session.flush()
+        session.add(to_case_row(case))
+        session.commit()
+
+    with Session(engine) as session:
+        row = session.get(CaseRow, case.id)
+        assert row is not None
+
+        assert to_case(row) == case
+
+
+def test_cases_get_deleted_when_field_is_deleted(engine: Engine) -> None:
+    field = Field(country=Country.RS)
+    planting = Planting(field_id=field.id, crop=Crop.PEPPER)
+    case = Case(
+        planting_id=planting.id,
+        initial_message="Žute mi listovi na paprici.",
+        observed_on=date(2026, 10, 1),
+    )
+    with Session(engine) as session:
+        session.add(to_field_row(field))
+        session.flush()
+        session.add(to_planting_row(planting))
+        session.flush()
+        session.add(to_case_row(case))
+        session.commit()
+
+    with Session(engine) as session:
+        session.execute(delete(FieldRow).where(FieldRow.id == field.id))
+        session.commit()
+
+    with Session(engine) as session:
+        assert session.get(CaseRow, case.id) is None

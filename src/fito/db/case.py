@@ -62,3 +62,24 @@ def to_case_row(case: Case) -> CaseRow:
         observed_on=case.observed_on,
         opened_at=case.opened_at,
     )
+
+
+def to_case(row: CaseRow) -> Case:
+    """Build the ``Case`` for ``row``, back through the model's validators.
+
+    Through ``Case(...)`` and not ``model_construct``, for the reasons
+    decisions/0013 gives for ``Field``. ``opened_at`` arrives aware and in
+    UTC, because ``UTCDateTime`` reattaches the zone on read
+    (decisions/0018); without that the model would accept the naive value
+    and the case would compare unequal to the one that was written.
+
+    Field by field, for the same reason as ``to_case_row``.
+    """
+
+    return Case(
+        id=row.id,
+        planting_id=row.planting_id,
+        initial_message=row.initial_message,
+        observed_on=row.observed_on,
+        opened_at=row.opened_at,
+    )
