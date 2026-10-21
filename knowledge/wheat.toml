@@ -1,0 +1,50 @@
+# Wheat, leaf yellowing.
+# ILLUSTRATION, NOT KNOWLEDGE: no rule here has a source yet.
+# Assumes one cause at a time: an answer that points to one cause
+# rules out the others.
+
+# The lines above are for people; this one is for the program.
+illustrative = true
+
+[[causes]]
+id = "nitrogen_deficiency"
+name = "nedostatak azota"
+
+[[causes]]
+id = "sulfur_deficiency"
+name = "nedostatak sumpora"
+
+[[causes]]
+id = "yellow_rust"
+name = "žuta rđa"
+
+[[causes]]
+id = "waterlogging"
+name = "zabarenje"
+
+
+[[questions]]
+id = "leaf_age"
+text = "Žute li prvo stariji (donji) listovi ili mlađi (gornji)?"
+
+[questions.eliminates]
+donji = ["sulfur_deficiency"]
+gornji = ["nitrogen_deficiency", "waterlogging"]
+
+
+[[questions]]
+id = "powdery_stripes"
+text = "Ima li na listu žutih pruga koje ostavljaju prah na prstu?"
+
+[questions.eliminates]
+da = ["nitrogen_deficiency", "sulfur_deficiency", "waterlogging"]
+ne = ["yellow_rust"]
+
+
+[[questions]]
+id = "low_ground"
+text = "Je li žutilo u nižim delovima njive, gde se voda zadržava posle kiše?"
+
+[questions.eliminates]
+da = []
+ne = ["waterlogging"]
