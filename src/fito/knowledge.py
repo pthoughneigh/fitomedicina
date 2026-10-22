@@ -104,6 +104,38 @@ class KnowledgePack(BaseModel):
                         )
         return self
 
+    @model_validator(mode="after")
+    def _check_ids_are_unique(self) -> Self:
+        """Reject a cause id or a question id that appears more than once.
+
+        Copying a block to start the next one is how a pack grows, and an id
+        left unchanged is the likeliest slip. Both kinds of id are keys the
+        rest of the system looks things up by. Two causes under one id
+        collapse into one candidate, and one of them can never be named.
+        Two questions under one id make a recorded move ambiguous, since a
+        move names its question by id (decisions/0019).
+
+        The first rule cannot see this: a duplicated cause still exists.
+
+        Answers need no such check. They are the keys of a table, so they
+        cannot repeat: TOML refuses a key written twice, with ``Cannot
+        overwrite a value`` (measured), and a Python dict cannot hold one
+        twice either.
+        """
+        seen_causes = set()
+        for cause in self.causes:
+            if cause.id in seen_causes:
+                raise ValueError(f"Cause id {cause.id!r} appears more than once.")
+            seen_causes.add(cause.id)
+
+        seen_questions = set()
+        for question in self.questions:
+            if question.id in seen_questions:
+                raise ValueError(f"Question id {question.id!r} appears more than once.")
+            seen_questions.add(question.id)
+
+        return self
+
 
 def load_pack(path: Path) -> KnowledgePack:
     """Read the knowledge pack at ``path`` and check it.
@@ -123,5 +155,5 @@ def load_pack(path: Path) -> KnowledgePack:
     before a conversation starts: the fix belongs in the file, not here.
     """
 
-    with Path(path).open("rb") as file:
+    with path.open("rb") as file:
         return KnowledgePack.model_validate(tomllib.load(file))

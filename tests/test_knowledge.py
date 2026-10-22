@@ -24,6 +24,15 @@ to know that. The assertion is meant to change on that day, by hand,
 together with the content. The path is built from this file's own
 location, so the test finds the pack whichever folder pytest is started
 from.
+
+``test_two_causes_with_the_same_id_raise`` and
+``test_two_questions_with_the_same_id_raise`` hold the second rule: every
+id appears once. Copying a block to start the next one is how a pack
+grows, and an id left unchanged is the likeliest slip in a file written by
+hand. The first rule cannot see it, since a duplicated cause still exists.
+Two rules on ``KnowledgePack`` now raise the same ``value_error`` with the
+same empty ``loc``, so each test asserts the sentence of its own rule, not
+only the id.
 """
 
 from pathlib import Path
@@ -62,3 +71,57 @@ def test_answer_eliminating_an_unknown_cause_raises() -> None:
 def test_wheat_pack_is_marked_as_an_illustration() -> None:
     pack = load_pack(WHEAT_PACK)
     assert pack.illustrative
+
+
+def test_two_causes_with_the_same_id_raise() -> None:
+    pack = {
+        "illustrative": True,
+        "causes": [
+            {"id": "nitrogen_deficiency", "name": "nedostatak azota"},
+            {"id": "nitrogen_deficiency", "name": "nedostatak sumpora"},
+        ],
+        "questions": [
+            {
+                "id": "leaf_age",
+                "text": "Žute li prvo stariji (donji) listovi ili mlađi (gornji)?",
+                "eliminates": {"donji": [], "gornji": ["nitrogen_deficiency"]},
+            }
+        ],
+    }
+
+    with pytest.raises(ValidationError) as excinfo:
+        KnowledgePack.model_validate(pack)
+
+    errors = excinfo.value.errors()
+    assert len(errors) == 1
+    assert errors[0]["type"] == "value_error"
+    assert errors[0]["loc"] == ()
+    assert "Cause id 'nitrogen_deficiency' appears more than once" in errors[0]["msg"]
+
+
+def test_two_questions_with_the_same_id_raise() -> None:
+    pack = {
+        "illustrative": True,
+        "causes": [{"id": "nitrogen_deficiency", "name": "nedostatak azota"}],
+        "questions": [
+            {
+                "id": "leaf_age",
+                "text": "Žute li prvo stariji (donji) listovi ili mlađi (gornji)?",
+                "eliminates": {"da": ["nitrogen_deficiency"]},
+            },
+            {
+                "id": "leaf_age",
+                "text": "Ima li na listu žutih pruga koje ostavljaju prah na prstu?",
+                "eliminates": {"ne": ["nitrogen_deficiency"]},
+            },
+        ],
+    }
+
+    with pytest.raises(ValidationError) as excinfo:
+        KnowledgePack.model_validate(pack)
+
+    errors = excinfo.value.errors()
+    assert len(errors) == 1
+    assert errors[0]["type"] == "value_error"
+    assert errors[0]["loc"] == ()
+    assert "Question id 'leaf_age' appears more than once" in errors[0]["msg"]
