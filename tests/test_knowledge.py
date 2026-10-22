@@ -33,6 +33,16 @@ hand. The first rule cannot see it, since a duplicated cause still exists.
 Two rules on ``KnowledgePack`` now raise the same ``value_error`` with the
 same empty ``loc``, so each test asserts the sentence of its own rule, not
 only the id.
+
+``test_load_pack_reads_the_path_it_is_given`` holds the promise in
+``load_pack``'s signature: the file it reads is the one it is handed. The
+test of the real pack cannot see this, since a function that always opens
+``knowledge/wheat.toml`` passes it, and one did, until the suite was run
+from inside ``tests/``. Here the pack is a different one, written for the
+test into ``tmp_path``, the empty folder pytest gives each test that asks
+for it, and the assertion is on its one cause. It is written as UTF-8
+explicitly: on Windows Python writes text in the system's code page by
+default, and ``tomllib`` reads only UTF-8.
 """
 
 from pathlib import Path
@@ -43,6 +53,21 @@ from pydantic import ValidationError
 from fito.knowledge import KnowledgePack, load_pack
 
 WHEAT_PACK = Path(__file__).resolve().parents[1] / "knowledge" / "wheat.toml"
+FROST_PACK = """
+    illustrative = true
+
+    [[causes]]
+    id = "frost"
+    name = "mraz"
+
+    [[questions]]
+    id = "cold_night"
+    text = "Je li se javilo posle hladne noći?"
+
+    [questions.eliminates]
+    da = []
+    ne = ["frost"]
+"""
 
 
 def test_answer_eliminating_an_unknown_cause_raises() -> None:
@@ -125,3 +150,11 @@ def test_two_questions_with_the_same_id_raise() -> None:
     assert errors[0]["type"] == "value_error"
     assert errors[0]["loc"] == ()
     assert "Question id 'leaf_age' appears more than once" in errors[0]["msg"]
+
+
+def test_load_pack_reads_the_path_it_is_given(tmp_path: Path) -> None:
+    pack_file = tmp_path / "frost.toml"
+    pack_file.write_text(FROST_PACK, encoding="utf-8")
+    pack = load_pack(pack_file)
+
+    assert [cause.id for cause in pack.causes] == ["frost"]
