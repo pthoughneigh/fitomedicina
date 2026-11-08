@@ -36,9 +36,21 @@ every question asked, and several causes still standing. Its last answer,
 keeps its line in the trail, with an empty list. The trail has one line
 per answer, and an empty line is how it shows a question that changed
 nothing.
+
+``test_unknown_answer_raises`` holds the promise in ``narrow``'s
+docstring: a move whose answer the question does not accept raises
+``KeyError`` rather than being caught. The tempting safe version,
+``eliminates.get(move.answer, [])``, would turn a bug in whatever made
+the move into an answer that rules nothing out. The loop would go on,
+the trail would show an empty line, and nothing would say that a word
+the pack does not know had been recorded: the silence decisions/0020
+refuses for an unknown cause id, at the other end of the pack. The
+assertion on ``args`` holds that the error names the unknown word.
 """
 
 import tomllib
+
+import pytest
 
 from fito.knowledge import KnowledgePack
 from fito.narrowing import Ask, Move, Stop, StopReason, narrow
@@ -108,3 +120,11 @@ def test_no_question_left_stops_with_questions_exhausted() -> None:
     assert report.standing == ["b", "c"]
     assert [entry.eliminated for entry in report.trail] == [["a"], []]
     assert report.next_step == Stop(reason=StopReason.QUESTIONS_EXHAUSTED)
+
+
+def test_unknown_answer_raises() -> None:
+    moves = [Move(question_id="first", answer="možda")]
+    with pytest.raises(KeyError) as excinfo:
+        narrow(PACK, moves)
+
+    assert excinfo.value.args == ("možda",)
