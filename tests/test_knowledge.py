@@ -43,6 +43,16 @@ test into ``tmp_path``, the empty folder pytest gives each test that asks
 for it, and the assertion is on its one cause. It is written as UTF-8
 explicitly: on Windows Python writes text in the system's code page by
 default, and ``tomllib`` reads only UTF-8.
+
+``test_pack_without_causes_raises`` holds the third rule: a pack has at
+least one cause. Without it an empty pack loads, and each reader fails
+in its own way: the loop stops at once with ``NONE_LEFT``, saying every
+cause was ruled out when there was none, and the risk worker divides by
+zero, two steps from the file that is wrong. It is a constraint on one
+field, not a model validator, so its error has an address,
+``("causes",)``, and Pydantic's own type, ``too_short``, which is what
+the test reads. Questions get no such rule: a pack whose one cause needs
+no question is legal, and ``test_risk.py`` uses a pack with none.
 """
 
 from pathlib import Path
@@ -158,3 +168,13 @@ def test_load_pack_reads_the_path_it_is_given(tmp_path: Path) -> None:
     pack = load_pack(pack_file)
 
     assert [cause.id for cause in pack.causes] == ["frost"]
+
+
+def test_pack_without_causes_raises() -> None:
+    with pytest.raises(ValidationError) as excinfo:
+        KnowledgePack.model_validate({"illustrative": True, "causes": [], "questions": []})
+
+    errors = excinfo.value.errors()
+    assert len(errors) == 1
+    assert errors[0]["type"] == "too_short"
+    assert errors[0]["loc"] == ("causes",)

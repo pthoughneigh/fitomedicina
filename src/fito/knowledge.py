@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Self
 
 from pydantic import BaseModel, ConfigDict, model_validator
+from pydantic import Field as PydanticField
 
 
 class Cause(BaseModel):
@@ -69,7 +70,12 @@ class KnowledgePack(BaseModel):
     # gives a key placed below the first ``[[causes]]`` to that cause, so a
     # misplaced flag fails twice: as missing here and as unknown there.
     illustrative: bool
-    causes: list[Cause]
+    # At least one cause, checked here so that no reader has to. Without
+    # it an empty pack loads, the loop stops at once with NONE_LEFT,
+    # saying every cause was ruled out when there was none, and the risk
+    # worker divides by zero. Questions get no such rule: one cause needs
+    # no question to stand.
+    causes: list[Cause] = PydanticField(min_length=1)
     questions: list[Question]
 
     @model_validator(mode="after")

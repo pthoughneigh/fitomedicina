@@ -48,5 +48,6 @@ def assess_risk(pack: KnowledgePack) -> dict[str, float]:
     which checkpoint 2 will multiply and take logarithms of with NumPy
     and SciPy (decisions/0022), and 1/3 has no exact form in either type.
     """
+    # Never a division by zero: a pack with no causes does not load.
     share = 1 / len(pack.causes)
     return {cause.id: share for cause in pack.causes}
