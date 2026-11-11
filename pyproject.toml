@@ -55,6 +55,9 @@ strict = true
 warn_unreachable = true
 plugins = ["pydantic.mypy"]
 
+[tool.pydantic-mypy]
+init_typed = true  # check what goes into a model, not only what comes out
+
 [tool.uv]
 link-mode = "copy"
 
