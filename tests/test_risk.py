@@ -55,15 +55,15 @@ PACK = KnowledgePack.model_validate(
 
 
 def test_prior_has_every_cause_and_nothing_else() -> None:
-    prior = assess_risk(PACK)
+    prior = assess_risk(PACK).data
     assert set(prior.keys()) == {"a", "b", "c"}
 
 
 def test_every_cause_starts_above_zero() -> None:
-    prior = assess_risk(PACK)
+    prior = assess_risk(PACK).data
     assert min(prior.values()) > 0
 
 
 def test_prior_sums_to_one() -> None:
-    prior = assess_risk(PACK)
+    prior = assess_risk(PACK).data
     assert sum(prior.values()) == pytest.approx(1)

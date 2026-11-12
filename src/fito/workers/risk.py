@@ -12,16 +12,18 @@ database, no network and no model.
 """
 
 from fito.knowledge import KnowledgePack
+from fito.workers.result import WorkerResult
 
 
-def assess_risk(pack: KnowledgePack) -> dict[str, float]:
+def assess_risk(pack: KnowledgePack) -> WorkerResult[dict[str, float]]:
     """Return the prior: the probability of each cause before any answer.
 
-    Its shape is the contract the real worker will keep: one probability
-    for every cause in the pack and for nothing else, each above zero,
-    summing to one, keyed by cause id. Keyed rather than listed in the
-    pack's order, for the reason ``TrailEntry`` carries its move: two
-    lists matched by position go wrong silently.
+    The prior is the data of a ``WorkerResult``, the envelope every worker
+    hands back. Its shape is the contract the real worker will keep: one
+    probability for every cause in the pack and for nothing else, each
+    above zero, summing to one, keyed by cause id. Keyed rather than
+    listed in the pack's order, for the reason ``TrailEntry`` carries its
+    move: two lists matched by position go wrong silently.
 
     Each share is above zero however unlikely the weather makes its
     cause: an unlikely cause gets a small share, never none. Only an
@@ -50,4 +52,4 @@ def assess_risk(pack: KnowledgePack) -> dict[str, float]:
     """
     # Never a division by zero: a pack with no causes does not load.
     share = 1 / len(pack.causes)
-    return {cause.id: share for cause in pack.causes}
+    return WorkerResult(data={cause.id: share for cause in pack.causes})
